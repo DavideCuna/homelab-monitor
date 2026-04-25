@@ -19,7 +19,7 @@ CREATE TABLE reading (
 		  id_reading 	SERIAL 			PRIMARY KEY,
 		  id_device 	INTEGER 			NOT NULL REFERENCES device(id_device),
 		  id_metric 	INTEGER 			NOT NULL REFERENCES metric_type(id_metric),
-		  timestamp 	TIMESTAMPZ 		NOT NULL DEFAULT NOW(),
+		  timestamp 	TIMESTAMPTZ 		NOT NULL DEFAULT NOW(),
 		  valore 		NUMERIC(10, 4) NOT NULL
 );
 
@@ -34,9 +34,9 @@ VALUES (
 );
 
 INSERT INTO metric_type (nome, unita_misura, descrizione) VALUES
-		  ('cpu_usage'				'%',		'CPU usage percentage'),
-		  ('ram_usage'				'%',		'RAM usage percentage'),
-		  ('cpu_temp'				'°C',		'CPU temperature'),
-		  ('disk_usage'			'%',		'Disk usage percentage on /'),
-		  ('net_bytes_sent'		'MB/s',		'Network Mbytes sent per second'),
-		  ('net_bytes_recv'		'MB/s',		'Network Mbytes received per second'),
+		  ('cpu_usage',				'%',		'CPU usage percentage'),
+		  ('ram_usage',				'%',		'RAM usage percentage'),
+		  ('cpu_temp',				'°C',		'CPU temperature'),
+		  ('disk_usage',			'%',		'Disk usage percentage on /'),
+		  ('net_bytes_sent',		'MB/s',		'Network Mbytes sent per second'),
+		  ('net_bytes_recv',		'MB/s',		'Network Mbytes received per second');

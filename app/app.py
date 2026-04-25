@@ -69,8 +69,8 @@ def get_media_oraria():
     with engine.connect() as con:
         df = pd.read_sql_query(
             sql=text("""
-                SELECT DATE_TRUNC('hour', R.rimestamp) AS ora, 
-                       AVG(R.valore) AS media,
+                SELECT DATE_TRUNC('hour', R.timestamp) AS ora, 
+                       AVG(R.valore) AS media
                 FROM reading AS R
                 JOIN metric_type AS M ON M.id_metric = R.id_metric
                 WHERE M.nome = :metrica
@@ -88,7 +88,7 @@ def get_media_oraria():
 # ENDPOINT 4: POST /api/range_valori
 # body atteso: {"metrica": "cpu_usage"}
 
-@app.route("/api/range_valori", methods=["POST")
+@app.route("/api/range_valori", methods=["POST"])
 def get_range_valori():
     dati = request.get_json()
     metrica = dati["metrica"]
@@ -106,13 +106,16 @@ def get_range_valori():
             params={"metrica": metrica}
         )
 
+    if df.empty or df.iloc[0]["valore_min"] is None:
+        return jsonify({"valore_min": None, "valore_max": None})
+
     return jsonify(df.iloc[0].to_dict())
 
 # ---
 # ENDPOINT 5: POST /api/media_per_metrica
 # body atteso: { "start_date": "2026-01-01", "end_date": "2026-01-31" }
 
-@app.route("/api/media_per_metrica" methods=["POST"])
+@app.route("/api/media_per_metrica", methods=["POST"])
 def get_media_per_metrica():
     dati = request.get_json()
     start_date = dati["start_date"]

@@ -161,9 +161,9 @@
 			const select = document.getElementById("metricSelect");
 
 			metriche.forEach(m => {
-				const option = document.creatElement("option");
+				const option = document.createElement("option");
 				option.value = m.nome;
-				option.text = '${m.nome} (${m.unita_misura})';
+				option.text = `${m.nome} (${m.unita_misura})`;
 				select.appendChild(option);
 			});
 
@@ -209,8 +209,8 @@
 			const attuale = letture.length > 0 ? parseFloat(letture[0].valore).toFixed(2) : "-";
 
 			document.getElementById("valAttuale").textContent = attuale;
-			document.getElementById("valMin").textContent = parseFloat(range.valore_min).toFixed(2);
-			document.getElementById("valMax").textContent = parseFloat(range.valore_max).toFixed(2);
+			document.getElementById("valMin").textContent = range.valore_min != null ? parseFloat(range.valore_min).toFixed(2) : "—";
+			document.getElementById("valMax").textContent = range.valore_max != null ? parseFloat(range.valore_max).toFixed(2) : "—";
 
 			["unitAttuale", "unitMin", "unitMax"].forEach(id => {
 				document.getElementById(id).textContent = unitaCorrente;
@@ -218,7 +218,7 @@
 		}
 
 		async function aggiornaGrafico() {
-			const res = await fetch("/api/media_orarie", {
+			const res = await fetch("/api/media_oraria", {
 				method: "POST",
 				headers: { "Content-type": "application/json" },
 				body: JSON.stringify({ metrica: metricaCorrente })
@@ -243,7 +243,7 @@
 				data: {
 					labels,
 					datasets: [{
-						label: '${metricaCorrente} (${unitaCorrente})',
+						label: `${metricaCorrente} (${unitaCorrente})`,
 						data: valori,
 						borderColor: "#6c8ebf",
 						backgroundColor: "rgba(108, 142, 191, 0.1)",

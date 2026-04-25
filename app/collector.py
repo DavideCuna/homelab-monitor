@@ -22,7 +22,7 @@ engine = create_engine(DATABASE_URL)
 # ricerca del proprio hostname nel database
 
 def get_device_id():
-    hostname = socket.gethostname()
+    hostname = os.environ.get("DEVICE_HOSTNAME", socket.gethostname())
     with engine.connect() as con:
         result = con.execute(
             text("SELECT id_device FROM device WHERE hostname = :hostname"),
@@ -35,7 +35,7 @@ def get_device_id():
 
 # lettura valori di sistema tramite psutil
 
-def leggi_metriche(prev_next, prev_time):
+def leggi_metriche(prev_net, prev_time):
     cpu = psutil.cpu_percent(interval=1)
     ram = psutil.virtual_memory().percent
     disk = psutil.disk_usage("/").percent
@@ -85,7 +85,7 @@ def scrivi_metriche(id_device, metriche):
             con.execute(
                 text("""
                     INSERT INTO reading (id_device, id_metric, valore)
-                    VALUES (:id_device, id_metric, :valore)
+                    VALUES (:id_device, :id_metric, :valore)
                 """),
                 {"id_device": id_device, "id_metric": row[0], "valore": valore}
             )
@@ -105,14 +105,14 @@ def main():
 
     while True:
         try:
-            metriche, prev:net, prev_time = leggi_metriche(prev_net, prev_time)
+            metriche, prev_net, prev_time = leggi_metriche(prev_net, prev_time)
             scrivi_metriche(id_device, metriche)
             print(f"[INFO] Metriche scritte: {metriche}")
         except Exception as e:
-            print(f"[ERROR] {e}"
+            print(f"[ERROR] {e}")
 
         time.sleep(60)
 
 
-if __name__ =="__main__":
+if __name__ == "__main__":
     main()

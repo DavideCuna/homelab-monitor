@@ -2,3 +2,4 @@ flask
 sqlalchemy
 psutil
 pandas
+psycopg2-binary
