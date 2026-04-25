@@ -6,7 +6,7 @@
 #   - POST  /api/range_valori       ->  min e max di una metrica
 #   - POST  /api/media_per_metrica  -> media per matrica in un intervallo date
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from sqlalchemy import create_engine, text
 import pandas as pd
 import os
@@ -138,6 +138,12 @@ def get_media_per_metrica():
 
     return jsonify(df.to_dict(orient="records"))
 
+# ---
+# DASHBOARD
+
+@app.route("/")
+def index():
+    return send_from_directory("../dashboard", "index.html")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

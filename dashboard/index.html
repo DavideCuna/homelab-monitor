@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Homelab Monitor</title>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<style>
+		/* --- reset e variabili --- */
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		:root {
+			--bg: #0f1117;
+			--surface: #1a1d27;
+			--border: #2a2d3a;
+			--accent: #6c8ebf;
+			--text: #e0e0e0;
+			--subtext: #8888aa;
+		}
+
+		body {
+			background: var(--bg);
+			color: var(--text);
+			font-family: 'Segoe UI', sans-serif;
+			padding: 2rem;
+		}
+
+		h1 {
+			font-size: 1.4rem;
+			font-weight: 600;
+			margin-bottom: 1.5rem;
+			color: var(--accent);
+		}
+
+		/* --- selector metrica --- */
+		.selector {
+			margin-bottom: 2rem;
+		}
+
+		.selector label {
+			font-size: 0.85rem;
+			color: var(--subtext);
+			display: block;
+			margin-bottom: 0.4rem;
+		}
+
+		.selector select {
+			background: var(--surface);
+			color: var(--text);
+			border: 1px solid var(--border);
+			border-radius: 6px;
+			padding: 0.5rem 1rem;
+			font-size: 1rem;
+			cursor: pointer;
+			outline: none;
+		}
+
+		/* --- card --- */
+		.cards {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 1rem;
+			margin-bottom: 2rem;
+		}
+
+		.card {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			padding: 1.2rem 1.5rem;
+		}
+
+		.card .label {
+			font-size: 0.8rem;
+			color: var(--subtext);
+			margin-bottom: 0.4rem;
+		}
+
+		.card .value {
+			font-size: 1.8rem;
+			font-weight: 700;
+		}
+
+		.card .unit {
+			font-size: 0.85rem;
+			color: var(--subtext);
+			margin-left: 0.3rem;
+		}
+
+		/* --- grafico --- */
+		.chart-container {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			padding: 1.5rem;
+		}
+
+		.chart-container h2 {
+			font-size: 0.9rem;
+			color: var(--subtext);
+			margin-bottom: 1rem;
+			font-weight: 400;
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>Homelab Monitor</h1>
+
+	<!-- Dropdown per scegliere la metrica -->
+	<div class="selector">
+		<label>Metrica</label>
+		<select id="metricSelect"></select>
+	</div>
+
+	<!-- Tre card: attuale, minimo, massimo -->
+	<div class="cards">
+		<div class="card">
+			<div class="label">Valore attuale</div>
+			<div>
+				<span class="value" id="valAttuale">—</span>
+				<span class="unit" id="unitAttuale"></span>
+			</div>
+		</div>
+		<div class="card">
+			<div class="label">Minimo</div>
+			<div>
+				<span class="value" id="valMin">—</span>
+				<span class="unit" id="unitMin"></span>
+			</div>
+		</div>
+		<div class="card">
+			<div class="label">Massimo</div>
+			<div>
+				<span class="value" id="valMax">—</span>
+				<span class="unit" id="unitMax"></span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Grafico media oraria -->
+	<div class="chart-container">
+		<h2>Media oraria — ultime 24 ore</h2>
+		<canvas id="chart"></canvas>
+	</div>
+
+	<script>
+		let metricaCorrente = null;
+		let unitaCorrente = null;
+		let chart = null;
+
+		async function init() {
+			const res = await fetch("/api/metriche");
+			const metriche = await res.json();
+			const select = document.getElementById("metricSelect");
+
+			metriche.forEach(m => {
+				const option = document.creatElement("option");
+				option.value = m.nome;
+				option.text = '${m.nome} (${m.unita_misura})';
+				select.appendChild(option);
+			});
+
+			select.addEventListener("change", () => {
+				const selected = metriche.find(m => m.nome === select.value);
+				metricaCorrente = selected.nome;
+				unitaCorrente = selected.unita_misura;
+				aggiornaDashboard();
+			});
+
+			if (metriche.length > 0) {
+				metricaCorrente = metriche[0].nome;
+				unitaCorrente = metriche[0].unita_misura;
+				select.value = metricaCorrente;
+				aggiornaDashboard();
+			}
+		}
+
+		async function aggiornaDashboard() {
+			await Promise.all([
+				aggiornaCards(),
+				aggiornaGrafico()
+			]);
+		}
+
+		async function aggiornaCards() {
+			const resLettura = await fetch("/api/letture", {
+				method: "POST",
+				headers: { "Content-type": "application/json" },
+				body: JSON.stringify({ metrica: metricaCorrente, limit: 1 })
+			});
+
+			const letture = await resLettura.json();
+
+			const resRange = await fetch("/api/range_valori", {
+				method: "POST",
+				headers: { "Content-type": "application/json" },
+				body: JSON.stringify({ metrica: metricaCorrente })
+			});
+
+			const range = await resRange.json();
+
+			const attuale = letture.length > 0 ? parseFloat(letture[0].valore).toFixed(2) : "-";
+
+			document.getElementById("valAttuale").textContent = attuale;
+			document.getElementById("valMin").textContent = parseFloat(range.valore_min).toFixed(2);
+			document.getElementById("valMax").textContent = parseFloat(range.valore_max).toFixed(2);
+
+			["unitAttuale", "unitMin", "unitMax"].forEach(id => {
+				document.getElementById(id).textContent = unitaCorrente;
+			});
+		}
+
+		async function aggiornaGrafico() {
+			const res = await fetch("/api/media_orarie", {
+				method: "POST",
+				headers: { "Content-type": "application/json" },
+				body: JSON.stringify({ metrica: metricaCorrente })
+			});
+
+			const dati = await res.json();
+
+			const labels = dati.map(d => {
+				const ora = new Date(d.ora);
+				return ora.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+			});
+
+			const valori = dati.map(d => parseFloat(d.media).toFixed(2));
+
+			if (chart) {
+				chart.destroy()
+			}
+
+			const ctx = document.getElementById("chart").getContext("2d");
+			chart = new Chart(ctx, {
+				type: "line",
+				data: {
+					labels,
+					datasets: [{
+						label: '${metricaCorrente} (${unitaCorrente})',
+						data: valori,
+						borderColor: "#6c8ebf",
+						backgroundColor: "rgba(108, 142, 191, 0.1)",
+						borderWidth: 2,
+						fill: true,
+						tension: 0.4,
+						pointRadius: 3
+					}]
+				},
+				options: {
+					responsive: true,
+					plugins: {
+						legend: { labels: { color: "#e0e0e0" } }
+					},
+					scales: {
+						x: {
+							ticks: { color: "#8888aa" },
+							grid: { color: "#2a2d3a" }
+						},
+						y: {
+							ticks: { color: "#8888aa" },
+							grid: { color: "#2a2d3a" }
+						}
+					}
+				}
+			});
+		}
+		init();
+		setInterval(aggiornaDashboard, 60_000);
+	</script>
+
+</body>
+
+</html>
